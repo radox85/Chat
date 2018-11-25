@@ -19,19 +19,27 @@ public class ServerSocketReaderRunnable implements Runnable {
     public void run() {
         ChatMessage message = null;
         if (chatLog.register(client)) {
-            try (ObjectInputStream input = new ObjectInputStream(client.getInputStream())) {
-                do {
-                    try {
-                        message = (ChatMessage) input.readObject();
-                        chatLog.acceptMessage(message);
-                    } catch (ClassNotFoundException e) {
-                        break;
-                    }
-                } while (message.getMessage().equalsIgnoreCase("exit"));
+            try (ObjectInputStream clientInput = new ObjectInputStream(client.getInputStream())) {
+                processClientInput(clientInput);
             } catch (IOException e) {
-                System.out.println("### Can not accept message on chat log. Server error ####");
+                System.out.println("### Can not create input object. Server error ####");
             }
             chatLog.unRegister(client);
         }
+    }
+
+    private void processClientInput(ObjectInputStream clientInput) throws IOException {
+        ChatMessage message;
+        do {
+            try {
+                message = (ChatMessage) clientInput.readObject();
+                if (!message.getMessage().equals("exit") || message.getMessage() != null) {
+                    chatLog.acceptMessage(message);
+                }
+            } catch (ClassNotFoundException e) {
+                System.out.println("### Can not accept message. Server error ####");
+                break;
+            }
+        } while (message.getMessage().equalsIgnoreCase("exit"));
     }
 }
